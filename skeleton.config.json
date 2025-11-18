@@ -1,0 +1,11 @@
+{
+  "projectType": "backend-api",
+  "language": "typescript",
+  "framework": "express",
+  "architecture": "clean-architecture",
+  "skeletons": [
+    { "id": "auth-jwt", "version": "stable-v2" },
+    { "id": "db-prisma-postgres", "version": "latest" },
+    { "id": "logger-winston", "version": "standard" }
+  ]
+}
