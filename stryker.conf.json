@@ -1,0 +1,17 @@
+{
+  "$schema": "./node_modules/@stryker-mutator/core/schema/stryker-schema.json",
+  "packageManager": "npm",
+  "testRunner": "vitest",
+  "checkers": ["typescript"],
+  "mutate": [
+    "primitives/security/hasher/v1.0.0/index.ts"
+  ],
+  "thresholds": {
+    "high": 85,
+    "low": 70,
+    "break": 70
+  },
+  "coverageAnalysis": "perTest",
+  "timeoutMS": 180000,
+  "ignoreStatic": true
+}

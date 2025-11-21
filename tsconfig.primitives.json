@@ -1,0 +1,12 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "outDir": "primitives",
+    "rootDir": "primitives",
+    "noEmit": true,
+    "incremental": false
+  },
+  "include": ["./primitives/**/*"],
+  "exclude": ["node_modules", "dist", "src", "test"]
+}
+

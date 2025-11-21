@@ -1,0 +1,5 @@
+{
+	"id": "utils.uuid",
+	"version": "1.0.0",
+	"description": "UUID v7 generator. Zero dependencies. Must validate UUID format on input."
+}

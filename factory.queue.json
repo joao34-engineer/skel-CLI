@@ -1,0 +1,14 @@
+[
+  {
+    "id": "security.tokenizer",
+    "version": "1.0.0",
+    "description": "JWT Signing/Verification using 'jose'. Supports HS256 and RS256. Must use Zod for input validation.",
+    "status": "completed"
+  },
+  {
+    "id": "utils.uuid",
+    "version": "1.0.0",
+    "description": "UUID v7 generator. Zero dependencies. Must validate UUID format on input.",
+    "status": "completed"
+  }
+]

@@ -1,0 +1,27 @@
+{
+	"name": "@skel/security.tokenizer",
+	"version": "1.0.0",
+	"description": "JWT Signing/Verification using 'jose'. Supports HS256 and RS256. Must use Zod for input validation.",
+	"type": "module",
+	"scripts": {
+		"test": "vitest run",
+		"lint": "biome check .",
+		"format": "biome format . --write"
+	},
+	"devDependencies": {
+		"vitest": "^4.0.10",
+		"@vitest/ui": "^4.0.10",
+		"@biomejs/biome": "^2.3.6",
+		"@stryker-mutator/core": "^9.3.0",
+		"@stryker-mutator/vitest-runner": "^9.3.0",
+		"@stryker-mutator/typescript-checker": "^9.3.0",
+		"fast-check": "^4.3.0",
+		"zod": "^4.1.12",
+		"typescript": "^5.0.0",
+		"@types/node": "^24.0.0"
+	},
+	"plugins": [
+		"@stryker-mutator/vitest-runner",
+		"@stryker-mutator/typescript-checker"
+	]
+}
