@@ -1,5 +1,8 @@
 import { Command, Flags, ux, Args } from '@oclif/core';
+import path from 'path';
 import { installPrimitive } from '../../core/file-system.js';
+import { FrameworkDetector } from '../../core/frameworks/detector.js';
+import { AdapterGenerator } from '../../core/frameworks/adapter-generator.js';
 
 export default class PrimitiveAdd extends Command {
   static override description = 'Add a primitive to your project';
@@ -41,8 +44,27 @@ export default class PrimitiveAdd extends Command {
       this.log(
         `\n✓ Primitive "${primitiveId}@${flags.version}" installed successfully!`
       );
+
+      // Framework detection and adapter generation
+      const detector = new FrameworkDetector(projectPath);
+      const stack = await detector.detect();
+
+      if (stack.framework !== 'unknown') {
+        const confidence = Math.round((stack.confidence || 0) * 100);
+        this.log(`\n🛡️ Detected Stack: ${stack.framework} (Confidence: ${confidence}%)`);
+
+        try {
+          const generator = new AdapterGenerator();
+          const targetDir = path.join(projectPath, 'src', 'adapters', primitiveId.replace('.', '/'));
+          await generator.generate(primitiveId, stack, targetDir);
+          this.log(`✓ Adapter generated at: ${targetDir}`);
+        } catch (error) {
+          this.log(`⚠️ No adapter found for ${stack.framework}, manual integration required`);
+        }
+      }
+
       this.log(
-        `\nNext steps:\n- Review the installed primitive in ./primitives/${primitiveId.split('.')[0]}/${primitiveId.split('.')[1]}/\n- Create adapters for your framework using the "primitive fuse" command`
+        `\nNext steps:\n- Review the installed primitive in ./primitives/${primitiveId.split('.')[0]}/${primitiveId.split('.')[1]}/`
       );
     } catch (error) {
       ux.action.stop('Failed.');

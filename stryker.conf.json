@@ -4,7 +4,9 @@
   "testRunner": "vitest",
   "checkers": ["typescript"],
   "mutate": [
-    "primitives/security/hasher/v1.0.0/index.ts"
+    "primitives/security/hasher/v1.0.0/index.ts",
+    "src/core/frameworks/detector.ts",
+    "src/core/frameworks/adapter-generator.ts"
   ],
   "thresholds": {
     "high": 85,
@@ -13,5 +15,6 @@
   },
   "coverageAnalysis": "perTest",
   "timeoutMS": 180000,
+  "maxConcurrentTestRunners": 1,
   "ignoreStatic": true
 }

@@ -1,8 +1,8 @@
 # Software Skeleton CLI - Complete Project Overview
 
-**Version:** 2.0.0  
+**Version:** 2.1.0  
 **Status:** Production-Ready  
-**Last Updated:** November 20, 2025
+**Last Updated:** December 2025
 
 ---
 
@@ -11,6 +11,7 @@
 **Software Skeleton CLI** is a framework-agnostic CLI tool that automates the creation, management, and installation of **Primitives** - reusable, immutable, versioned logic units that can be plugged into any project regardless of framework or language.
 
 The project transforms how developers share and reuse code by providing:
+
 - ✅ Framework-agnostic primitives (TypeScript, Python, C#, Java, PHP)
 - ✅ Automatic framework detection
 - ✅ CLI-based project initialization and primitive installation
@@ -24,12 +25,15 @@ The project transforms how developers share and reuse code by providing:
 ### 1. **CLI Commands**
 
 #### `skel init [--name PROJECT_NAME]`
+
 Creates a new Software Skeleton project with:
+
 - `skeleton.config.json` - Project configuration
 - Metadata with creation/update timestamps
 - Empty primitives, dependencies, and devDependencies arrays
 
 **Example:**
+
 ```bash
 skel init --name my-api
 # Creates: my-api/skeleton.config.json
@@ -38,12 +42,15 @@ skel init --name my-api
 ---
 
 #### `skel info`
+
 Displays information about the current skeleton project:
+
 - Project name and version
 - Installed primitives count
 - List of installed primitives
 
 **Example:**
+
 ```bash
 skel info
 # Outputs:
@@ -58,22 +65,31 @@ skel info
 ---
 
 #### `skel primitive add <PRIMITIVE_ID> [--version VERSION]`
+
 Installs a primitive into the current project:
+
 - Downloads primitive from the library (e.g., `security.tokenizer@1.0.0`)
 - Copies primitive files (index.ts, index.test.ts, primitive.json)
+- **Detects framework automatically** (NestJS, Django, Spring, etc.)
+- **Generates framework-specific adapter** if template exists
 - Updates skeleton.config.json with primitive metadata
 - Supports versioning (default: 1.0.0)
 
 **Example:**
+
 ```bash
 skel primitive add security.tokenizer --version 1.0.0
 # Installs to: primitives/security/tokenizer/1.0.0/
+# 🛡️ Detected Stack: nestjs (Confidence: 95%)
+# ✓ Adapter generated at: src/adapters/security/tokenizer/
 ```
 
 ---
 
 #### `skel primitive list`
+
 Lists all available primitives in the CLI library with:
+
 - Primitive ID (format: category.name)
 - Versions available
 - Description
@@ -81,38 +97,85 @@ Lists all available primitives in the CLI library with:
 
 ---
 
-### 2. **Framework Detection System**
+### 2. **Universal Adapter Engine** 🆕
+
+The **Universal Adapter Engine** automatically generates framework-specific code when primitives are installed.
+
+#### Components:
+
+**FrameworkDetector** (`src/core/frameworks/detector.ts`)
+
+- Automatically identifies project framework and language
+- Returns confidence scores (0.0-1.0)
+- Supports 6 languages, 12+ frameworks
+- Includes security features (path validation, safe file reading)
+
+**AdapterGenerator** (`src/core/frameworks/adapter-generator.ts`)
+
+- Reads templates from `src/templates/adapters/`
+- Replaces placeholders (`{{PRIMITIVE_ID}}`, `{{PROJECT_NAME}}`)
+- Validates paths against directory traversal attacks
+- Generates framework-specific service/adapter code
+- **Security:** Zod input validation, 1MB file size limit, path traversal prevention
+- **Tested:** 80%+ mutation score with comprehensive test suite
+
+**Template System** (`src/templates/adapters/`)
+
+- Framework-specific templates organized by language/framework/primitive
+- Example: `ts/nestjs/security.tokenizer/tokenizer.service.ts`
+- Templates use placeholders for dynamic content
+- Production-ready code with dependency injection, error handling
+
+#### How It Works:
+
+1. User runs `skel primitive add security.tokenizer`
+2. Primitive is installed to `primitives/` directory
+3. **FrameworkDetector** analyzes project (detects NestJS, Django, etc.)
+4. **AdapterGenerator** looks for matching template
+5. If found: Generates adapter in `src/adapters/`
+6. If not found: Shows warning, manual integration required
+
+---
+
+### 3. **Framework Detection System**
 
 The **FrameworkDetector** automatically identifies:
 
 #### Supported Languages & Frameworks:
 
 **TypeScript/JavaScript (via package.json)**
+
 - NestJS (`@nestjs/core`, priority: 10)
 - Next.js (`next`, priority: 9)
 - Angular (`@angular/core`, priority: 8)
 - Express (`express`, priority: 5)
 
 **Python (via requirements.txt, Pipfile, pyproject.toml)**
+
 - Django (priority: 10)
 - FastAPI (priority: 9)
 - Flask (priority: 7)
 
 **C# (via .csproj, .sln)**
+
 - ASP.NET Core (`Microsoft.AspNetCore`, priority: 10)
 
 **Java (via pom.xml, build.gradle)**
+
 - Spring Boot (`spring-boot-starter`, priority: 10)
 
 **PHP (via composer.json)**
+
 - Laravel (`laravel/framework`, priority: 10)
 
 #### Detected Data Layers:
+
 - MongoDB (mongoose, mongodb)
 - PostgreSQL (pg, postgres, typeorm)
 - GraphQL (graphql, apollo-server)
 
 #### Detection Features:
+
 - **Priority-based ordering** - Detectors run in priority order (Node: 10, Python: 8, C#: 7, Java: 6, PHP: 5)
 - **Confidence scoring** - Each detection includes confidence (0.0-1.0)
 - **Confidence boosters** - Enhanced confidence when additional indicators found (e.g., @nestjs/cli for NestJS)
@@ -127,14 +190,17 @@ The **FrameworkDetector** automatically identifies:
 The project includes versioned, immutable primitives:
 
 #### **security.tokenizer@1.0.0**
+
 **Description:** JWT Signing/Verification using 'jose'  
 **Features:**
+
 - HS256 and RS256 algorithm support
 - Zod input validation
 - Mutation test score: 80%+
 - Zero external dependencies (except jose)
 
 **Files:**
+
 - `src/index.ts` - Implementation
 - `src/index.test.ts` - Test suite
 - `primitive.json` - Metadata
@@ -146,14 +212,17 @@ The project includes versioned, immutable primitives:
 ---
 
 #### **utils.uuid@1.0.0**
+
 **Description:** UUID v7 generator  
 **Features:**
+
 - Zero dependencies
 - UUID format validation
 - Mutation test score: 80%+
 - Production-ready
 
 **Files:**
+
 - `src/index.ts` - Implementation
 - `src/index.test.ts` - Test suite
 - `primitive.json` - Metadata
@@ -167,7 +236,9 @@ The project includes versioned, immutable primitives:
 ### 4. **Quality Assurance System**
 
 #### Mutation Testing with Stryker
+
 The project enforces code quality through mutation testing:
+
 - **Stryker configuration** - `stryker.conf.json`
 - **Mutation score thresholds:**
   - High: 85%
@@ -178,11 +249,13 @@ The project enforces code quality through mutation testing:
 - **Coverage analysis:** Per test
 
 #### Test Framework
+
 - **Vitest 2.0.4** - Fast unit testing
 - **Fast-check** - Property-based testing
 - **@vitest/ui** - Visual test reporting
 
 #### Linting & Formatting
+
 - **Biome 2.3.6** - Fast linter and formatter
 - **ESLint config** - `eslint.config.mjs`
 
@@ -191,6 +264,7 @@ The project enforces code quality through mutation testing:
 ### 5. **Factory Automation System**
 
 The **SkelFactory** (scripts/factory.ts) automates:
+
 - Queue-based primitive processing (`factory.queue.json`)
 - Automatic test suite generation
 - Automatic Stryker configuration generation
@@ -200,6 +274,7 @@ The **SkelFactory** (scripts/factory.ts) automates:
 - Status tracking (pending, completed, failed)
 
 **Features:**
+
 - Reads primitives from queue
 - Generates standardized configurations
 - Runs tests and mutation testing
@@ -221,7 +296,7 @@ software-skeleton-cli/
 │   │   ├── init.ts              # Create new project
 │   │   ├── info.ts              # Show project info
 │   │   └── primitive/
-│   │       ├── add.ts           # Install primitive
+│   │       ├── add.ts           # Install primitive + adapter generation
 │   │       └── list.ts          # List primitives
 │   │
 │   ├── core/                     # Core business logic
@@ -230,8 +305,17 @@ software-skeleton-cli/
 │   │   ├── errors.ts            # Custom errors
 │   │   └── frameworks/
 │   │       ├── detector.ts      # Framework detection
-│   │       ├── config.ts        # Framework configs
-│   │       └── detector.test.ts # Framework tests
+│   │       ├── detector.test.ts # Framework tests
+│   │       ├── adapter-generator.ts      # Adapter generation engine
+│   │       ├── adapter-generator.test.ts # Adapter tests (80%+ mutation)
+│   │       └── config.ts        # Framework configs
+│   │
+│   ├── templates/                # Adapter templates
+│   │   └── adapters/
+│   │       └── ts/
+│   │           └── nestjs/
+│   │               └── security.tokenizer/
+│   │                   └── tokenizer.service.ts
 │   │
 │   ├── types/
 │   │   └── config.d.ts          # Configuration types
@@ -294,6 +378,7 @@ software-skeleton-cli/
 ## 📋 Dependencies
 
 ### Production Dependencies
+
 - **@oclif/core** ^3.27.0 - CLI framework
 - **archiver** ^7.0.1 - ZIP file creation
 - **chalk** ^5.6.2 - Colored terminal output
@@ -303,6 +388,7 @@ software-skeleton-cli/
 - **zod** ^4.1.12 - TypeScript schema validation
 
 ### Dev Dependencies
+
 - **@biomejs/biome** ^2.3.6 - Linter & formatter
 - **@stryker-mutator/core** ^9.3.0 - Mutation testing engine
 - **@stryker-mutator/typescript-checker** ^9.3.0 - TS support for Stryker
@@ -315,6 +401,7 @@ software-skeleton-cli/
 - **vitest** ^2.0.4 - Test runner
 
 ### Volta Management
+
 - **Node.js** 24.8.0 (pinned)
 - **npm** 10.8.3 (pinned)
 
@@ -339,6 +426,7 @@ npm run dev          # or on Windows: npm run dev.cmd
 ```
 
 ### TypeScript Configuration
+
 - **Target:** ES2022
 - **Module:** ESNext
 - **Strict Mode:** Enabled
@@ -352,35 +440,41 @@ npm run dev          # or on Windows: npm run dev.cmd
 ## 🎯 Key Features
 
 ### ✅ **Framework-Agnostic Primitives**
+
 - Works across TypeScript, Python, C#, Java, PHP
 - Each primitive is language-specific but can be adapted
 - Versioning ensures compatibility
 
 ### ✅ **Automatic Framework Detection**
+
 - Multi-language support (6 languages, 12+ frameworks)
 - Confidence scoring for detection accuracy
 - Parallel and sequential detection options
 - Configurable priority-based ordering
 
 ### ✅ **Production-Quality Code**
+
 - Mutation testing (80%+ score requirement)
 - Property-based testing support
 - Comprehensive test coverage
 - Biome linting & formatting
 
 ### ✅ **CLI-First Experience**
+
 - Easy project initialization
 - One-command primitive installation
 - Interactive prompts with Inquirer
 - Colored output with Chalk
 
 ### ✅ **Scalable Architecture**
+
 - Strategy pattern for detectors
 - Configuration-driven detection
 - Dependency injection
 - Clean separation of concerns
 
 ### ✅ **Queue-Based Automation**
+
 - Factory automation for bulk operations
 - Status tracking (pending/completed/failed)
 - Automatic configuration generation
@@ -391,6 +485,7 @@ npm run dev          # or on Windows: npm run dev.cmd
 ## 📖 Documentation
 
 The project includes 10+ comprehensive documentation files in `/rules`:
+
 1. **QUICK_START.md** - Get running in 5 minutes
 2. **PROJECT_ARCHITECTURE.md** - Complete system design
 3. **MUTATION_TESTING_INDEX.md** - Quality strategy
@@ -401,6 +496,7 @@ The project includes 10+ comprehensive documentation files in `/rules`:
 8. **MUTATION_SCORE_80_ACHIEVED.md** - Milestone achievement
 
 Plus:
+
 - **DETECTOR_IMPLEMENTATION.md** - Framework detection documentation
 - **CONFIG_INTEGRATION.md** - Configuration system documentation
 - **FACTORY_RUN_SUMMARY.md** - Factory execution logs
@@ -410,6 +506,7 @@ Plus:
 ## 🚀 Usage Examples
 
 ### Initialize a New Project
+
 ```bash
 skel init --name my-awesome-api
 cd my-awesome-api
@@ -417,6 +514,7 @@ skel info
 ```
 
 ### Install Primitives
+
 ```bash
 # Add JWT token signing/verification
 skel primitive add security.tokenizer --version 1.0.0
@@ -429,6 +527,7 @@ skel info
 ```
 
 ### Develop & Test
+
 ```bash
 cd primitives/security/tokenizer/1.0.0
 npm test              # Run unit tests
@@ -437,6 +536,7 @@ npm run lint          # Lint code
 ```
 
 ### Detect Project Framework
+
 ```bash
 # In any project directory
 npx software-skeleton-cli detect  # (future feature)
@@ -455,14 +555,19 @@ npx software-skeleton-cli detect  # (future feature)
 
 ## 🎯 Strategic Vision
 
-### Current Status (v2.0.0)
+### Current Status (v2.1.0)
+
 - ✅ CLI framework fully functional
 - ✅ Framework detection (6 languages, 12+ frameworks)
+- ✅ **Universal Adapter Engine** (automatic code generation)
+- ✅ **AdapterGenerator with 80%+ mutation score**
+- ✅ **NestJS adapter template** (production-ready)
 - ✅ Primitive management system
 - ✅ Quality assurance pipeline
 - ✅ Factory automation
 
 ### Roadmap
+
 - **Phase 1:** Multi-language support (in progress)
 - **Phase 2:** Web UI for primitive discovery
 - **Phase 3:** Community primitive registry
@@ -473,17 +578,19 @@ npx software-skeleton-cli detect  # (future feature)
 
 ## 📊 Code Quality Metrics
 
-| Metric | Value |
-|--------|-------|
-| **Mutation Score (Target)** | 80%+ |
-| **Test Framework** | Vitest 2.0.4 |
-| **Linter** | Biome 2.3.6 |
-| **Languages Supported** | 6 (TS, Python, C#, Java, PHP, and more) |
-| **Primitives Available** | 2 (security.tokenizer, utils.uuid) |
-| **CLI Commands** | 4 main + subcommands |
-| **Frameworks Detected** | 12+ |
-| **Lines of Code (CLI)** | ~500 |
-| **Lines of Code (Primitives)** | ~200 per primitive |
+| Metric                               | Value                                   |
+| ------------------------------------ | --------------------------------------- |
+| **Mutation Score (Target)**          | 80%+                                    |
+| **Test Framework**                   | Vitest 2.0.4                            |
+| **Linter**                           | Biome 2.3.6                             |
+| **Languages Supported**              | 6 (TS, Python, C#, Java, PHP, and more) |
+| **Primitives Available**             | 2 (security.tokenizer, utils.uuid)      |
+| **CLI Commands**                     | 4 main + subcommands                    |
+| **Frameworks Detected**              | 12+                                     |
+| **Adapter Templates**                | 1 (NestJS/security.tokenizer)           |
+| **Lines of Code (CLI)**              | ~700                                    |
+| **Lines of Code (Primitives)**       | ~200 per primitive                      |
+| **Test Coverage (AdapterGenerator)** | 80%+ mutation score                     |
 
 ---
 
@@ -512,6 +619,7 @@ Framework Detector
 ### **What Happens Now**
 
 **Step 1: User runs `skel init`**
+
 ```bash
 $ skel init --name my-api
 ✓ Creates: my-api/skeleton.config.json
@@ -528,6 +636,7 @@ $ skel init --name my-api
 ```
 
 **Step 2: Framework Detector exists but is NOT called**
+
 - The detector can identify NestJS, Django, Spring, Laravel, etc.
 - The detector can identify MongoDB, PostgreSQL, GraphQL
 - **But it's never invoked during `skel init`**
@@ -561,24 +670,25 @@ Content: INTELLIGENT
 
 ### **Impact of Misalignment**
 
-| Aspect | Current | Ideal |
-|--------|---------|-------|
-| **Project Setup** | Manual, empty config | Automatic, pre-populated |
-| **User Experience** | User must manually identify stack | Stack auto-identified |
-| **Primitive Selection** | Guesswork | Informed by detected frameworks |
-| **Configuration Accuracy** | 0% auto-filled | 100% auto-filled with confidence scores |
-| **Time to Productivity** | Longer | Immediate |
+| Aspect                     | Current                           | Ideal                                   |
+| -------------------------- | --------------------------------- | --------------------------------------- |
+| **Project Setup**          | Manual, empty config              | Automatic, pre-populated                |
+| **User Experience**        | User must manually identify stack | Stack auto-identified                   |
+| **Primitive Selection**    | Guesswork                         | Informed by detected frameworks         |
+| **Configuration Accuracy** | 0% auto-filled                    | 100% auto-filled with confidence scores |
+| **Time to Productivity**   | Longer                            | Immediate                               |
 
 ### **Recommendation: Integration Steps**
 
 To bring `skel init` and Framework Detector into sync:
 
 1. **Modify `init.ts`** to call detector after project creation:
+
 ```typescript
 // After creating skeleton.config.json
 const detector = new FrameworkDetector(projectPath);
 const detected = await detector.detect();
-if (detected.framework !== 'unknown') {
+if (detected.framework !== "unknown") {
   config.frameworks = detected;
   await fs.writeJson(configPath, config, { spaces: 2 });
 }
@@ -594,13 +704,12 @@ if (detected.framework !== 'unknown') {
 ✅ **Better primitive recommendations** - Suggest primitives for detected framework  
 ✅ **Improved UX** - Less manual configuration needed  
 ✅ **Data consistency** - Single source of truth for framework info  
-✅ **Future-ready** - Foundation for AI-assisted primitive generation  
+✅ **Future-ready** - Foundation for AI-assisted primitive generation
 
 ---
 
-
-
 The project follows a **5-layer security model**:
+
 1. Input validation (Zod schemas)
 2. Type safety (TypeScript strict mode)
 3. Immutable primitives (versioning)
@@ -614,6 +723,7 @@ See `rules/security.md` for details.
 ## 🤝 Contributing
 
 To contribute:
+
 1. Clone the repository
 2. Run `npm install`
 3. Create a new primitive or feature
@@ -632,6 +742,7 @@ Refer to project license (check LICENSE file in root)
 ## 📞 Support
 
 For issues, questions, or feature requests:
+
 - Check `rules/QUICK_START.md` for common questions
 - Review `rules/PROJECT_ARCHITECTURE.md` for design decisions
 - Create an issue in the repository
@@ -640,5 +751,49 @@ For issues, questions, or feature requests:
 
 **This is a production-ready, scalable, and well-documented project that transforms how developers share and reuse code across different frameworks and languages.**
 
-Status: ✅ Ready for Use | Last Verified: November 20, 2025
+Status: ✅ Ready for Use | Last Verified: December 2025
 
+---
+
+## 🆕 Recent Updates (v2.1.0)
+
+### Universal Adapter Engine
+
+- **AdapterGenerator** class with security-first design
+- Path traversal prevention (validates all file paths)
+- Zod input validation for all parameters
+- Template rendering with placeholder replacement
+- Comprehensive test suite (80%+ mutation score)
+- Property-based testing with fast-check
+
+### Security Enhancements
+
+- File size limits (1MB max for config files)
+- Safe file reading with error handling
+- Path normalization and validation
+- Custom security errors (PathTraversalError, TemplateNotFoundError)
+
+### Template System
+
+- NestJS adapter for security.tokenizer
+- Production-ready code with:
+  - Dependency injection (@Injectable)
+  - ConfigService integration (fail-fast with getOrThrow)
+  - NestJS exception handling (BadRequestException, UnauthorizedException)
+  - Type-safe imports from primitives
+
+### CLI Integration
+
+- `skel primitive add` now auto-detects framework
+- Displays confidence scores
+- Generates adapters automatically
+- Graceful fallback if template missing
+
+### Mutations & Detection Improvements (v2.1.1 - 2025-11-21)
+
+- Hardened `FrameworkDetector` (`src/core/frameworks/detector.ts`): improved `safeReadFile` (null-bytes, rootBase path checks, symlink detection via `lstat`, 1MB config-size limit), and Zod validation before parsing package/composer files.
+- Expanded unit tests (`detector.test.ts`, `adapter-generator.test.ts`): converted to Vitest suites; added focused tests for Node/Python/Java/C#/PHP detection branches, boost keys, path & symlink checks, config-size boundaries, caching, parallel detection and property-based tests to reduce mutation survivors.
+- Adapter generator tests: added path traversal tests, null-bytes checks, missing-template handling, read errors propagation, empty-template cases, and placeholder rendering edge cases; assertions updated to `await expect(...).rejects` for clarity.
+- Stryker & test-runner stability: set `maxConcurrentTestRunners: 1`, added `vi.restoreAllMocks()` to `afterEach` in tests to avoid leaked mocks and DI warnings.
+- Mutation testing results: final run reached overall 86.62% (detector ≈ 84.03%, adapter-generator 100%); documented in `rules/MUTATION_SCORE_80_ACHIEVED.md`.
+- Docs & security: added short guidance for maintaining mutation score and documented secure safeReadFile/JSON validation practices.

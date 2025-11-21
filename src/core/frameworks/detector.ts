@@ -1,6 +1,9 @@
 import fs from 'fs-extra';
 import path from 'path';
+import { z } from 'zod';
 import { NODE_FRAMEWORKS, PYTHON_FRAMEWORKS, CSHARP_FRAMEWORKS, JAVA_FRAMEWORKS, PHP_FRAMEWORKS, getDataLayerType } from './config';
+
+const MAX_CONFIG_SIZE = 1024 * 1024;
 
 export type FrameworkName =
   | 'nestjs' | 'nextjs' | 'express' | 'angular'
@@ -27,23 +30,76 @@ export interface DetectorStrategy {
   detect(cwd: string): Promise<DetectionResult | null>;
 }
 
-class NodeDetector implements DetectorStrategy {
+abstract class BaseDetector implements DetectorStrategy {
+  abstract priority: number;
+  abstract detect(cwd: string): Promise<DetectionResult | null>;
+  protected async safeReadFile(filePath: string, rootBase?: string): Promise<string | null> {
+    try {
+      // Basic input checks to avoid null-bytes and path traversal
+      if (filePath.includes('\0')) {
+        console.warn('⚠️ Security Warning: Skipping file with invalid characters');
+        return null;
+      }
+      const resolved = path.resolve(filePath);
+      if (rootBase && !resolved.startsWith(path.resolve(rootBase))) {
+        console.warn(`⚠️ Security Warning: Skipping ${filePath} (Outside allowed root)`);
+        return null;
+      }
+      // Use lstat to detect symlinks and avoid TOCTOU symlink attacks
+      const stats = await fs.lstat(resolved);
+      if (!stats.isFile || (typeof stats.isFile === 'function' && !stats.isFile())) {
+        console.warn(`⚠️ Security Warning: Skipping ${filePath} (Not a regular file)`);
+        return null;
+      }
+      // Do not follow symbolic links
+      if ((stats as any).isSymbolicLink && (stats as any).isSymbolicLink()) {
+        console.warn(`⚠️ Security Warning: Skipping ${filePath} (Symbolic link)`);
+        return null;
+      }
+      if (stats.size > MAX_CONFIG_SIZE) {
+        console.warn(`⚠️ Security Warning: Skipping ${filePath} (File too large)`);
+        return null;
+      }
+      return await fs.readFile(resolved, 'utf-8');
+    } catch {
+      return null;
+    }
+  }
+}
+
+class NodeDetector extends BaseDetector {
   priority = 10;
 
   async detect(cwd: string): Promise<DetectionResult | null> {
     const pkgPath = path.join(cwd, 'package.json');
     if (!(await fs.pathExists(pkgPath))) return null;
 
-    const pkg = await fs.readJson(pkgPath) as { dependencies?: Record<string, string>; devDependencies?: Record<string, string> };
-    const deps = { ...pkg.dependencies, ...pkg.devDependencies };
+    const content = await this.safeReadFile(pkgPath, cwd);
+    if (!content) return null;
+
+    // Validate package.json structure before using it to avoid prototype pollution
+    const PackageJsonSchema = z.object({
+      dependencies: z.record(z.string(), z.string()).optional(),
+      devDependencies: z.record(z.string(), z.string()).optional()
+    });
+    let pkg;
+    try {
+      const parsed = JSON.parse(content);
+      const parsedRes = PackageJsonSchema.safeParse(parsed);
+      if (!parsedRes.success) return null;
+      pkg = parsedRes.data;
+    } catch { return null; }
+
+    const deps = { ...(pkg.dependencies ?? {}), ...(pkg.devDependencies ?? {}) };
 
     const framework = NODE_FRAMEWORKS.find(f => deps[f.key]);
     if (!framework) return null;
 
     let confidence = 0.7;
     // Check for confidence boost indicators
-    if (framework.confidenceBoost) {
+      if (framework.confidenceBoost) {
       for (const boostKey of framework.confidenceBoost) {
+        // Check both dependencies and a file path presence for boost keys
         if (deps[boostKey] || await fs.pathExists(path.join(cwd, boostKey))) {
           confidence = 0.95;
           break;
@@ -66,7 +122,7 @@ class NodeDetector implements DetectorStrategy {
   }
 }
 
-class PythonDetector implements DetectorStrategy {
+class PythonDetector extends BaseDetector {
   priority = 10;
 
   async detect(cwd: string): Promise<DetectionResult | null> {
@@ -76,7 +132,8 @@ class PythonDetector implements DetectorStrategy {
       const filePath = path.join(cwd, file);
       if (!(await fs.pathExists(filePath))) continue;
 
-      const content = await fs.readFile(filePath, 'utf-8');
+      const content = await this.safeReadFile(filePath, cwd);
+      if (!content) continue;
 
       const framework = PYTHON_FRAMEWORKS.find(f => content.includes(f.key));
       if (framework) {
@@ -89,7 +146,7 @@ class PythonDetector implements DetectorStrategy {
   }
 }
 
-class CSharpDetector implements DetectorStrategy {
+class CSharpDetector extends BaseDetector {
   priority = 10;
 
   async detect(cwd: string): Promise<DetectionResult | null> {
@@ -98,7 +155,8 @@ class CSharpDetector implements DetectorStrategy {
     
     if (!csproj) return null;
 
-    const content = await fs.readFile(path.join(cwd, csproj), 'utf-8');
+    const content = await this.safeReadFile(path.join(cwd, csproj), cwd);
+    if (!content) return null;
     
     const framework = CSHARP_FRAMEWORKS.find(f => content.includes(f.key));
     if (framework) {
@@ -121,7 +179,7 @@ class CSharpDetector implements DetectorStrategy {
   }
 }
 
-class JavaDetector implements DetectorStrategy {
+class JavaDetector extends BaseDetector {
   priority = 10;
 
   async detect(cwd: string): Promise<DetectionResult | null> {
@@ -133,7 +191,8 @@ class JavaDetector implements DetectorStrategy {
     for (const file of files) {
       const filePath = path.join(cwd, file.path);
       if (await fs.pathExists(filePath)) {
-        const content = await fs.readFile(filePath, 'utf-8');
+        const content = await this.safeReadFile(filePath, cwd);
+        if (!content) continue;
 
         const framework = JAVA_FRAMEWORKS.find(f => content.includes(f.key));
         if (framework) {
@@ -158,15 +217,30 @@ class JavaDetector implements DetectorStrategy {
   }
 }
 
-class PHPDetector implements DetectorStrategy {
+class PHPDetector extends BaseDetector {
   priority = 10;
 
   async detect(cwd: string): Promise<DetectionResult | null> {
     const composerPath = path.join(cwd, 'composer.json');
     if (!(await fs.pathExists(composerPath))) return null;
 
-    const composer = await fs.readJson(composerPath) as { require?: Record<string, string>; 'require-dev'?: Record<string, string> };
-    const deps = { ...composer.require, ...composer['require-dev'] };
+    const content = await this.safeReadFile(composerPath, cwd);
+    if (!content) return null;
+
+    // Validate composer.json structure using Zod
+    const ComposerJsonSchema = z.object({
+      require: z.record(z.string(), z.string()).optional(),
+      'require-dev': z.record(z.string(), z.string()).optional()
+    });
+    let composer;
+    try {
+      const parsed = JSON.parse(content);
+      const res = ComposerJsonSchema.safeParse(parsed);
+      if (!res.success) return null;
+      composer = res.data;
+    } catch { return null; }
+
+    const deps = { ...(composer.require ?? {}), ...(composer['require-dev'] ?? {}) };
 
     const framework = PHP_FRAMEWORKS.find(f => deps[f.key]);
     if (framework) {
@@ -195,15 +269,17 @@ export class FrameworkDetector {
 
   constructor(
     private cwd: string = process.cwd(),
-    detectors?: DetectorStrategy[]
+    strategies: DetectorStrategy[] = []
   ) {
-    this.detectors = detectors ?? [
+    const defaults = [
       new NodeDetector(),
       new PythonDetector(),
       new CSharpDetector(),
       new JavaDetector(),
       new PHPDetector()
     ];
+    
+    this.detectors = [...defaults, ...strategies];
     this.detectors.sort((a, b) => (b.priority ?? 0) - (a.priority ?? 0));
   }
 
